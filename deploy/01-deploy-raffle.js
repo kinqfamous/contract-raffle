@@ -5,7 +5,7 @@ const { verify } = require("../utils/verify");
 const VRF_SUB_FUND_AMOUNT = ethers.utils.parseEther("2");
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
-  const { deploy, log } = deployments;
+  const { deploy, get, log } = deployments;
   const { deployer } = await getNamedAccounts();
   const chainId = network.config.chainId;
   const chainConfig = NetworkConfig[chainId];
@@ -18,7 +18,11 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   let subscriptionId;
 
   if (developmentChains.includes(network.name)) {
-    const vrfCoordinatorV2Mock = await ethers.getContract("VRFCoordinatorV2Mock");
+    const vrfCoordinatorV2MockDeployment = await get("VRFCoordinatorV2_5Mock");
+    const vrfCoordinatorV2Mock = await ethers.getContractAt(
+      "VRFCoordinatorV2_5Mock",
+      vrfCoordinatorV2MockDeployment.address
+    );
     vrfCoordinatorV2Address = vrfCoordinatorV2Mock.address;
 
     const transactionResponse = await vrfCoordinatorV2Mock.createSubscription();
@@ -29,6 +33,10 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   } else {
     vrfCoordinatorV2Address = chainConfig.vrfCoordinatorV2;
     subscriptionId = chainConfig.subscriptionId;
+
+    if (!subscriptionId) {
+      throw new Error("Missing VRF_SUBSCRIPTION_ID in .env");
+    }
   }
 
   const args = [
@@ -38,6 +46,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     subscriptionId,
     chainConfig.callbackGasLimit,
     chainConfig.interval,
+    chainConfig.nativePayment,
   ];
 
   log("----------------------------------------------------");
@@ -47,6 +56,15 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     log: true,
     waitConfirmations: network.config.blockConfirmations || 1,
   });
+
+  if (developmentChains.includes(network.name)) {
+    const vrfCoordinatorV2MockDeployment = await get("VRFCoordinatorV2_5Mock");
+    const vrfCoordinatorV2Mock = await ethers.getContractAt(
+      "VRFCoordinatorV2_5Mock",
+      vrfCoordinatorV2MockDeployment.address
+    );
+    await vrfCoordinatorV2Mock.addConsumer(subscriptionId, raffle.address);
+  }
 
   if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
     await verify(raffle.address, args);

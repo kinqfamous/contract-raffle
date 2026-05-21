@@ -1,5 +1,7 @@
+require("dotenv").config();
 require("@nomiclabs/hardhat-ethers");
 require("hardhat-deploy");
+require("@nomicfoundation/hardhat-verify");
 
 const SEPOLIA_RPC_URL = process.env.SEPOLIA_RPC_URL || "";
 const PRIVATE_KEY = process.env.SEPOLIA_PRIVATE_KEY || "";

@@ -13,6 +13,9 @@
 # Hardhat compilation (v2) support directory
 /cache
 
+# Hardhat deploy output can include constructor args
+/deployments
+
 # Typechain output
 /types
 
